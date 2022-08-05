@@ -8,6 +8,7 @@ import jwt
 import requests
 from typing import List
 import os
+import base64
 
 class GitHubApp(GitHub):
     """
@@ -16,40 +17,25 @@ class GitHubApp(GitHub):
     Provides some convenience functions for testing purposes.
     """
 
-    def __init__(self, pem_path, app_id, nwo):
+    def __init__(self, app_pem, app_id):
         super().__init__()
         self.app_id = app_id
-
-        self.path = Path(pem_path)
-        self.app_id = app_id
-        if not self.path.is_file():
-            raise ValueError(f'argument: `pem_path` must be a valid filename. {pem_path} was not found.')
-        self.nwo = nwo
+        self.app_pem = app_pem
 
     def get_app(self):
-        with open(self.path, 'rb') as key_file:
-            client = GitHub()
-            client.login_as_app(private_key_pem=key_file.read(),
-                                app_id=self.app_id)
+        client = GitHub()
+        client.login_as_app(private_key_pem=base64.b64decode(self.app_pem),
+                            app_id=self.app_id)
         return client
 
     def get_installation(self, installation_id):
         "login as app installation without requesting previously gathered data."
-        with open(self.path, 'rb') as key_file:
-            client = GitHub()
-            client.login_as_app_installation(private_key_pem=key_file.read(),
-                                             app_id=self.app_id,
-                                             installation_id=installation_id)
+
+        client = GitHub()
+        client.login_as_app_installation(private_key_pem=base64.b64decode(self.app_pem),
+                                            app_id=self.app_id,
+                                            installation_id=installation_id)
         return client
-
-    def get_test_installation_id(self):
-        "Get a sample test_installation id."
-        client = self.get_app()
-        return next(client.app_installations()).id
-
-    def get_test_installation(self):
-        "login as app installation with the first installation_id retrieved."
-        return self.get_installation(self.get_test_installation_id())
 
     def get_jwt(self):
         """
@@ -63,24 +49,18 @@ class GitHubApp(GitHub):
             "exp": now + (60),
             "iss": self.app_id
         }
-        with open(self.path, 'rb') as key_file:
-            private_key = default_backend().load_pem_private_key(key_file.read(), None)
-            return jwt.encode(payload, private_key, algorithm='RS256')
+        private_key = default_backend().load_pem_private_key(base64.b64decode(self.app_pem), None)
+        return jwt.encode(payload, private_key, algorithm='RS256')
 
     def get_installation_id(self):
         "https://developer.github.com/v3/apps/#find-repository-installation"
-
-        owner, repo = self.nwo.split('/')
-
-        url = f'https://api.github.com/repos/{owner}/{repo}/installation'
-
+        url = f'https://api.github.com/app/installations'
         headers = {'Authorization': f'Bearer {self.get_jwt().decode()}',
                    'Accept': 'application/vnd.github+json'}
-
         response = requests.get(url=url, headers=headers)
         if response.status_code != 200:
             raise Exception(f'Status code : {response.status_code}, {response.json()}')
-        return response.json()['id']
+        return response.json()[0]['id']
 
     def get_installation_access_token(self, installation_id):
         "Get the installation access token for debugging."
@@ -125,15 +105,13 @@ class GitHubApp(GitHub):
 
 if __name__ == '__main__':
 
-    pem_path = 'pem.txt'
+    app_pem = os.getenv('INPUT_APP_PEM')
     app_id = os.getenv('INPUT_APP_ID')
-    nwo = os.getenv('GITHUB_REPOSITORY')
 
-    assert pem_path, 'Must supply input APP_PEM'
+    assert app_pem, 'Must supply input APP_PEM'
     assert app_id, 'Must supply input APP_ID'
-    assert nwo, "The environment variable GITHUB_REPOSITORY was not found."
 
-    app = GitHubApp(pem_path=pem_path, app_id=app_id, nwo=nwo)
+    app = GitHubApp(app_pem=app_pem, app_id=app_id)
     id = app.get_installation_id()
     token = app.get_installation_access_token(installation_id=id)
     assert token, 'Token not returned!'
