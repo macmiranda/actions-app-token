@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python3 ./token_getter.py
+python3 /app/token_getter.py
