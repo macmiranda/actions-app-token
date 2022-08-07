@@ -1,4 +1,4 @@
-name: 'Get an app token in an Actions workflow.'
+name: 'Generate a Github App token'
 description: Useful for remedying the problem of restricted access tokens, especially on PRs from forks.
 author: Hamel Husain
 inputs:
