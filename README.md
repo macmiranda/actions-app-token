@@ -10,6 +10,7 @@ This action helps you retrieve an authenticated app token with a GitHub app id a
 Actions have certain limitations.  Many of these limitations are for security and stability reasons, however not all of them are.  Some examples where you might want to impersonate a GitHub App temporarily in your workflow:
 
 - You want an [event to trigger a workflow](https://help.github.com/en/articles/events-that-trigger-workflows) on a specific ref or branch in a way that is not natively supported by Actions.  For example, a pull request comment fires the [issue_comment event](https://help.github.com/en/articles/events-that-trigger-workflows#issue-comment-event-issue_comment) which is sent to the default branch and not the PR's branch.  You can temporarily impersonate a GitHub App to make an event, such as a [label a pull_request](https://help.github.com/en/articles/events-that-trigger-workflows#pull-request-event-pull_request) to trigger a workflow on the right branch. This takes advantage of the fact that Actions cannot create events that trigger workflows, however other Apps can.
+- You want to checkout a repo under the same organization for which a Github App has access but `GITHUB_TOKEN` isn't sufficient (because it only authorizes access to the repo where the workflow is running). You could provide a PAT to `actions/checkout` but that would give the workflow access to all your personal repos as well.
 
 # Usage
 
@@ -25,7 +26,7 @@ Example:
 steps:
 - name: Get token
   id: get_token
-  uses: machine-learning-apps/actions-app-token@master
+  uses: macmiranda/actions-app-token@v1.0.3
   with:
     APP_PEM: ${{ secrets.APP_PEM }}
     APP_ID: ${{ secrets.APP_ID }}
@@ -39,9 +40,15 @@ steps:
 
 **Note: The input `APP_PEM` needs to be base64 encoded.**  You can encode your private key file like this from the terminal:
 
+### Linux
 ```
 cat your_app_key.pem | base64 -w 0 && echo
 ```
+### macOS
+```
+cat your_app_key.pem | base64 && echo
+```
+
 *The base64 encoded string must be on a single line, so be sure to remove any linebreaks when creating `APP_PEM` in your project's GitHub secrets.*
 
 ## Mandatory Inputs
