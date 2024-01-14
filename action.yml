@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/SchemaStore/schemastore/master/src/schemas/json/github-action.json
 name: 'Generate a Github App token'
 description: Useful for remedying the problem of restricted access tokens, especially on PRs from forks.
 author: Hamel Husain
